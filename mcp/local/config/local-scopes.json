@@ -1,0 +1,23 @@
+{
+  "comment": "Granted scopes for the Pengu Local MCP server (owner: M4). This file is the ONLY place paths/apps are configured — no hardcoded paths in code. Adding a root or app here is a SETUP permission granted by the user; routine actions inside these scopes then run without per-task approval.",
+  "fsRoots": [
+    {
+      "id": "pengu-sandbox",
+      "path": "%USERPROFILE%\\Documents\\PenguSandbox",
+      "description": "Sandbox root for folder creation/listing demos (A11)"
+    }
+  ],
+  "defaultRootId": "pengu-sandbox",
+  "urlPolicy": {
+    "schemes": ["http:", "https:"],
+    "allowCredentials": false,
+    "blockedHosts": []
+  },
+  "chromePath": "",
+  "allowedApps": {
+    "notepad": { "executable": "notepad.exe", "description": "Windows Notepad" },
+    "calculator": { "executable": "calc.exe", "description": "Windows Calculator" },
+    "paint": { "executable": "mspaint.exe", "description": "Windows Paint" },
+    "explorer": { "executable": "explorer.exe", "args": [], "description": "Windows File Explorer" }
+  }
+}

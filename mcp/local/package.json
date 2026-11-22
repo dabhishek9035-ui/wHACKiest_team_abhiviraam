@@ -1,0 +1,35 @@
+{
+  "name": "@pengu/local-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pengu Local MCP stdio server: scoped fs, Chrome URL open, allowlisted app launch, restricted shell runner (owner: M4). Allowlist runner, not a sandbox.",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./verify-token": {
+      "types": "./dist/verify-token.d.ts",
+      "default": "./dist/verify-token.js"
+    }
+  },
+  "bin": {
+    "pengu-local-mcp": "dist/server.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "~5.9.0",
+    "vitest": "^5.1.1"
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "server": "local",
+  "transport": "stdio",
+  "manifestVersion": "1.0.0",
+  "description": "Pengu Local MCP server — scoped fs, Chrome URL open, allowlisted app launch, restricted shell (allowlist runner, not a sandbox). Owner: M4.",
+  "policyNotes": {
+    "denyByDefault": "Anything not explicitly allowlisted or inside granted scopes fails closed.",
+    "approvalToken": "shell_run_restricted verifies the HMAC token injected by M1 via the reserved request _meta field (penguApproval). The token is never a model-visible argument and never reaches the UI.",
+    "verifiability": "fs_create_folder is locally verifiable (folder exists). browser_open_url and app_launch are not locally verifiable: resume marks them unknown and asks the user.",
+    "sandbox": "This server is an allowlist runner, not an OS-level sandbox. It does not contain a determined attacker; it prevents the agent from running anything outside the allowlist."
+  },
+  "tools": [
+    {
+      "name": "fs_create_folder",
+      "description": "Create a directory inside an approved root only. Idempotent: existing directory returns success with alreadyExisted:true. Rejects .. traversal and symlink escapes.",
+      "riskClass": "ROUTINE",
+      "scope": "fsRoots (config/local-scopes.json)",
+      "sideEffect": true,
+      "idempotent": true,
+      "reversible": true,
+      "requiresApprovalToken": false,
+      "previewTool": null,
+      "input": { "path": "string (absolute within an approved root, or relative to the default root)", "rootId": "optional string id from local-scopes.json" },
+      "verifiable": "local (folder exists)"
+    },
+    {
+      "name": "fs_list_dir",
+      "description": "List one directory inside an approved root. Returns names and types only (capped); never reads file contents.",
+      "riskClass": "READ",
+      "scope": "fsRoots (config/local-scopes.json)",
+      "sideEffect": false,
+      "idempotent": true,
+      "reversible": true,
+      "requiresApprovalToken": false,
+      "previewTool": null,
+      "input": { "path": "string", "rootId": "optional string", "limit": "optional number (1-500, default 200)" }
+    },
+    {
+      "name": "browser_open_url",
+      "description": "Open an HTTP/HTTPS URL in Chrome. Other schemes (file:, javascript:, ...) are refused; URLs with embedded credentials are refused.",
+      "riskClass": "ROUTINE",
+      "scope": "urlPolicy (config/local-scopes.json)",
+      "sideEffect": true,
+      "idempotent": false,
+      "reversible": false,
+      "requiresApprovalToken": false,
+      "previewTool": null,
+      "input": { "url": "string (http/https)" },
+      "verifiable": "unknown (not locally verifiable)"
+    },
+    {
+      "name": "app_launch",
+      "description": "Launch an allowlisted application by app ID from config. Unknown IDs are denied.",
+      "riskClass": "ROUTINE",
+      "scope": "allowedApps (config/local-scopes.json)",
+      "sideEffect": true,
+      "idempotent": false,
+      "reversible": false,
+      "requiresApprovalToken": false,
+      "previewTool": null,
+      "input": { "appId": "string (key of allowedApps)" },
+      "verifiable": "unknown (not locally verifiable)"
+    },
+    {
+      "name": "shell_describe_command",
+      "description": "READ: resolve an allowlisted command ID into the exact-action preview (purpose, resolved cwd, argv, impact, reversibility, timeout, output cap). Unknown command IDs and invalid args are denied here.",
+      "riskClass": "READ",
+      "scope": "commandAllowlist (config/command-allowlist.json)",
+      "sideEffect": false,
+      "idempotent": true,
+      "reversible": true,
+      "requiresApprovalToken": false,
+      "previewTool": null,
+      "input": { "commandId": "string (id from command-allowlist.json)", "args": "optional object of validated string arguments" }
+    },
+    {
+      "name": "shell_run_restricted",
+      "description": "CONSEQUENTIAL: run an allowlisted command ID with validated arguments, fixed cwd, timeout, capped output and no elevation. Requires a valid, unexpired exact-action HMAC approval token (injected by M1 via _meta). Unknown commands or bad args are denied even if the user would approve.",
+      "riskClass": "CONSEQUENTIAL",
+      "scope": "commandAllowlist (config/command-allowlist.json)",
+      "sideEffect": true,
+      "idempotent": false,
+      "reversible": false,
+      "requiresApprovalToken": true,
+      "previewTool": "shell_describe_command",
+      "input": { "commandId": "string", "args": "optional object; only declared args with matching patterns are accepted" },
+      "resolvedArgs": "argsHash is computed over {commandId, args, cwd} (contract 7.3)"
+    }
+  ]
+}

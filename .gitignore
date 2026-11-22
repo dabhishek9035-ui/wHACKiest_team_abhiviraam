@@ -1,0 +1,22 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+coverage/
+
+# secrets — never commit real values
+.env
+.env.*
+!.env.example
+
+# local runtime data
+*.log
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.tmp/
+
+# OS noise
+Thumbs.db
+.DS_Store

@@ -1,0 +1,28 @@
+{
+  "name": "@pengu/store",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pengu SQLite persistence: tasks, steps, checkpoints, approvals, receipts, side effects, restore (owner: M4).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-schema.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.2.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.6",
+    "typescript": "~5.9.0",
+    "vitest": "^5.1.1"
+  }
+}

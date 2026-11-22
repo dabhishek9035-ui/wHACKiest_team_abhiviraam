@@ -1,0 +1,14 @@
+{
+  "name": "pengu",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pengu — persistent AI desktop companion connecting everyday apps through MCP (wHACKiest 2026, Track 1).",
+  "scripts": {
+    "build": "pnpm -r --if-present run build",
+    "test": "pnpm -r --if-present run test",
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  }
+}

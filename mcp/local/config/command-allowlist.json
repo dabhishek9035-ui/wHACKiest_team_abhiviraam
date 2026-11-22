@@ -1,0 +1,73 @@
+{
+  "comment": "Allowlisted command IDs for shell_describe_command / shell_run_restricted (owner: M4). Read-only/info commands only. Adding an entry here does NOT make it safe — it only makes it approvable; sending/execution still requires M1's exact-action approval token. Unknown IDs and invalid args are denied, not approvable.",
+  "defaults": {
+    "timeoutMs": 15000,
+    "maxOutputBytes": 65536,
+    "cwd": "%USERPROFILE%\\Documents\\PenguSandbox"
+  },
+  "commands": [
+    {
+      "id": "sys.time",
+      "description": "Show the current local date/time",
+      "purpose": "Report the machine's current local time (read-only query)",
+      "impact": "None — read-only system query, no file or setting changes",
+      "reversible": true,
+      "executable": "powershell.exe",
+      "baseArgs": ["-NoProfile", "-NonInteractive", "-Command", "Get-Date -Format o"],
+      "args": []
+    },
+    {
+      "id": "sys.disk",
+      "description": "List filesystem drives and their usage",
+      "purpose": "Report disk usage per drive (read-only query)",
+      "impact": "None — read-only system query",
+      "reversible": true,
+      "executable": "powershell.exe",
+      "baseArgs": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "Get-PSDrive -PSProvider FileSystem | Format-Table -AutoSize | Out-String -Width 200"
+      ],
+      "args": []
+    },
+    {
+      "id": "sys.ipconfig",
+      "description": "Show network adapter configuration",
+      "purpose": "Report network configuration for connectivity diagnostics (read-only)",
+      "impact": "None — read-only network info",
+      "reversible": true,
+      "executable": "ipconfig.exe",
+      "baseArgs": ["/all"],
+      "args": []
+    },
+    {
+      "id": "sys.process_list",
+      "description": "List running processes",
+      "purpose": "Report which processes are running (read-only)",
+      "impact": "None — read-only process list",
+      "reversible": true,
+      "executable": "tasklist.exe",
+      "baseArgs": [],
+      "args": []
+    },
+    {
+      "id": "sys.process_info",
+      "description": "Show details for one process image name",
+      "purpose": "Look up details of a single named process (read-only)",
+      "impact": "None — read-only process query",
+      "reversible": true,
+      "executable": "tasklist.exe",
+      "baseArgs": ["/FI"],
+      "args": [
+        {
+          "name": "imageName",
+          "required": true,
+          "pattern": "^[A-Za-z0-9._ -]{1,64}$",
+          "template": "IMAGENAME eq {value}",
+          "description": "Process image name, e.g. notepad.exe (letters, digits, dot, dash, space only)"
+        }
+      ]
+    }
+  ]
+}
