@@ -111,7 +111,7 @@ mcp/local test:           Tests  24 passed (24)
 restart-test.ps1:         === RESULT: PASS (A13 + A14) ===  (RESTART_TEST_PASS)
 inject-test.ps1:          === RESULT: PASS (A15 web half) ===  (INJECT_TEST_PASS)
 ```
-Commit hash for this evidence: *(fill at sign-off — M4 re-runs the four commands on `main` and pastes `git log -1` hash here)*.
+Commit hash for this evidence: `dab02f67d148e00cd1c2b86c1b094102a681fc19` (branch `member-4`, 2026-11-22). M4 re-runs the four commands on `main` at merge time and initials below.
 
 ---
 
@@ -192,7 +192,7 @@ Sign-off table (one row per member; fill as items close):
 | Ronit Kapar | M1 | — | — | — | — |
 | Suparna Darsi | M2 | — | — | — | — |
 | Maneesha G | M3 | — | — | — | — |
-| D Venkata Abhishek | M4 | M4-1, M4-2, M4-3, M4-7, M4-8, M4-9 (halves) | *(this branch — fill hash at merge)* | DVA | *(M4 is the signer; re-run on `main` at merge)* |
+| D Venkata Abhishek | M4 | M4-1, M4-2, M4-3, M4-7, M4-8, M4-9 (halves) | `dab02f6` (branch `member-4`, 2026-11-22) | DVA | *(M4 is the signer; re-run on `main` at merge)* |
 
 ---
 
