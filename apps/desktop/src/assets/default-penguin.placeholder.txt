@@ -1,0 +1,3 @@
+owner: M2 (Suparna Darsi)
+purpose: Placeholder for the default penguin avatar asset (use pengu_idle.png / pixel pet asset pack).
+TODO: Copy approved default penguin PNG/GIF assets into apps/desktop/src/assets/.
