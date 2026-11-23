@@ -1,0 +1,16 @@
+{
+  "policyModel": "single-risk-based",
+  "approvalTtlSeconds": 180,
+  "defaultDecisionOnUnknown": "DENY",
+  "autoAllowRiskClassesInScope": ["READ", "ROUTINE"],
+  "approvalRequiredRiskClasses": ["CONSEQUENTIAL"],
+  "allowedUrlSchemes": ["http:", "https:"],
+  "forbiddenShellPatterns": [";", "&&", "||", "`", "$(", "|", ">", "<", "\n", "\r"],
+  "defaultAllowlistedApps": ["notepad", "calc", "chrome", "code"],
+  "defaultAllowlistedShellCommands": [
+    "sys_info",
+    "disk_usage",
+    "list_processes_summary",
+    "git_status"
+  ]
+}
