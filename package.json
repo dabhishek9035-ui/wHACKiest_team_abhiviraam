@@ -1,0 +1,23 @@
+{
+  "name": "pengu-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pengu — persistent, customizable AI desktop companion connected via MCP",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "dev:agent": "pnpm --filter @pengu/agent dev",
+    "test:agent": "pnpm --filter @pengu/agent test",
+    "smoke:glm": "pnpm --filter @pengu/agent smoke:glm"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.3"
+  }
+}
