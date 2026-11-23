@@ -1,0 +1,7 @@
+--
+-- owner: M4 (D Venkata Abhishek)
+-- purpose: SQLite DDL for tasks, steps, checkpoints, approvals, receipts, and side_effects tables.
+-- public interface: SQL schema executed on database initialization.
+-- consumed by: packages/store/src/index.ts (M4).
+-- TODO: Define normalized tables with indexes and foreign keys.
+--
