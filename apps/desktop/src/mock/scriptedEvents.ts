@@ -1,5 +1,4 @@
 // owner: M2
-// purpose: scripted event stream for UI dev
-// public interface it must expose: mock task/approval/timeline events per frozen contract
-// consumed by: mockServer
-// TODO: implement (canonical scaffold placeholder — header only, no code, section 8)
+// purpose: repeatable task, approval, partial-failure and restore fixtures for the UI.
+export const MOCK_PENDING_TASKS = [{ taskId: "demo-pending", request: "Summarize the project update and prepare a reply draft", status: "paused", pauseReason: "A consequential action needs a fresh approval.", updatedAt: "2026-11-23T10:00:00.000Z", steps: [{ stepId: "s1", summary: "Read the project update", tool: "gmail_read_thread", server: "gmail", status: "done" }, { stepId: "s2", summary: "Prepare reply draft", tool: "gmail_create_draft", server: "gmail", status: "pending" }] }];
+export const MOCK_SEND_PREVIEW = { to: "alex@example.test", subject: "Re: Project update", body: "Thanks for the update. I will review the proposed timeline and follow up.", purpose: "Send the reply draft requested by the user.", impact: "This sends an email to the external recipient.", reversibility: "Cannot be recalled after delivery." };

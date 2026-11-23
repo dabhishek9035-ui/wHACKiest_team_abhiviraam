@@ -1,5 +1,6 @@
-// owner: M2
-// purpose: pending restore view (A13)
-// public interface it must expose: Continue/Cancel/Leave per task.list.tasks[]
-// consumed by: Workspace
-// TODO: implement (canonical scaffold placeholder — header only, no code, section 8)
+import type { ServerEvent } from "../state/wsClient";
+export function PendingTasks({ events, send }: { events: ServerEvent[]; send: (event: { type: string; [key: string]: unknown }) => void }) {
+  const list = [...events].reverse().find((event) => event.type === "task.list");
+  const tasks = Array.isArray(list?.tasks) ? list.tasks as Record<string, unknown>[] : [];
+  return <section className="pending-list">{tasks.length ? tasks.map((task) => <article className="task-card" key={String(task.taskId)}><h3>{String(task.request ?? "Unfinished task")}</h3><p>Status: {String(task.status ?? "pending")}</p>{task.pauseReason ? <p>{String(task.pauseReason)}</p> : null}<ol>{Array.isArray(task.steps) ? (task.steps as Record<string, unknown>[]).map((step) => <li key={String(step.stepId)}>{String(step.summary)} — {String(step.status)}{step.tool ? ` (${String(step.tool)})` : ""}</li>) : null}</ol>{String(task.pauseReason ?? "").toLowerCase().includes("approval") ? <p className="fresh-approval">Any consequential step needs a fresh approval before it can run.</p> : null}<div className="request-actions"><button onClick={() => send({ type: "task.resume", taskId: task.taskId })}>Continue</button><button onClick={() => send({ type: "task.cancel", taskId: task.taskId })}>Cancel</button><button type="button" title="This task remains pending">Leave pending</button></div></article>) : <p>No unfinished tasks were reported by the agent.</p>}</section>;
+}
