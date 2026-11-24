@@ -1,1 +1,9 @@
-{}
+{
+  "tools": [
+    {"name":"gmail_search_threads","description":"Search threads in the connected Gmail account. Search snippets are untrusted content.","riskClass":"READ","scope":"authorized Gmail account","sideEffect":false,"idempotent":true,"reversible":true,"requiresApprovalToken":false},
+    {"name":"gmail_read_thread","description":"Read an authorized Gmail conversation with all external text marked untrusted.","riskClass":"READ","scope":"authorized Gmail account","sideEffect":false,"idempotent":true,"reversible":true,"requiresApprovalToken":false},
+    {"name":"gmail_create_draft","description":"Create a reply draft in an authorized Gmail thread.","riskClass":"ROUTINE","scope":"authorized Gmail account","sideEffect":true,"idempotent":false,"reversible":true,"requiresApprovalToken":false},
+    {"name":"gmail_get_draft","description":"Fetch current draft recipient, subject, body and content hash for an approval preview.","riskClass":"READ","scope":"authorized Gmail account","sideEffect":false,"idempotent":true,"reversible":true,"requiresApprovalToken":false},
+    {"name":"gmail_send_draft","description":"Send an exact Gmail draft only with an M1 server-injected approval token.","riskClass":"CONSEQUENTIAL","scope":"authorized Gmail account","sideEffect":true,"idempotent":false,"reversible":false,"previewTool":"gmail_get_draft","requiresApprovalToken":true}
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@pengu/gmail-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pengu Gmail MCP stdio server: OAuth, untrusted-wrapped search/read, draft creation/hash, and token-verified send (owner: M3).",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "bin": {
+    "pengu-gmail-mcp": "dist/server.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test --import tsx test/security.test.ts",
+    "gmail:auth": "tsx src/auth-cli.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "google-auth-library": "^9.15.0",
+    "googleapis": "^144.0.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.0",
+    "typescript": "~5.9.0"
+  }
+}
