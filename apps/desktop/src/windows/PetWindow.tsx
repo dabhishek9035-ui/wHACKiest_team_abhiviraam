@@ -6,9 +6,9 @@ import { isTauri } from "@tauri-apps/api/core";
 import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import penguinUrl from "../assets/penguin-default.png";
 import { StatusBadge } from "../components/StatusBadge";
 import { createTauriAvatarPersistence, loadAppliedAvatarSrc } from "../state/avatar";
+import { PENGU_DEFAULT_SRC, resolvePetSprite } from "../state/petAssets";
 import { getPetState, subscribePetState, type PetState } from "../state/store";
 import { Composer } from "./Composer";
 import { DOUBLE_TAP_MS, resolvePointerRelease, isDrag, type Point } from "./petGesture";
@@ -51,8 +51,9 @@ export function PetWindow() {
   const agent = useAgent();
   const persistence = useMemo(() => createTauriAvatarPersistence(), []);
   const [panel, setPanel] = useState<PetPanel>("pet");
-  const [avatarSrc, setAvatarSrc] = useState(penguinUrl);
+  const [customAvatarSrc, setCustomAvatarSrc] = useState<string | null>(null);
   const [avatarNotice, setAvatarNotice] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [petState, setPetState] = useState<PetState>(getPetState);
   const start = useRef<Point | null>(null);
   const dragged = useRef(false);
@@ -70,9 +71,9 @@ export function PetWindow() {
 
   useEffect(() => {
     let cancelled = false;
-    void loadAppliedAvatarSrc(persistence, penguinUrl).then((loaded) => {
+    void loadAppliedAvatarSrc(persistence, PENGU_DEFAULT_SRC).then((loaded) => {
       if (cancelled) return;
-      setAvatarSrc(loaded.src);
+      setCustomAvatarSrc(loaded.src === PENGU_DEFAULT_SRC ? null : loaded.src);
       setAvatarNotice(loaded.notice);
     });
     return () => {
@@ -93,6 +94,7 @@ export function PetWindow() {
 
   function markDrag() {
     dragged.current = true;
+    setIsDragging(true);
     lastTapAt.current = null;
     clearTimer(singleTimer);
   }
@@ -125,6 +127,7 @@ export function PetWindow() {
     const wasDrag = dragged.current;
     start.current = null;
     dragged.current = false;
+    setIsDragging(false);
     const release = resolvePointerRelease(wasDrag, lastTapAt.current, Date.now());
     if (release === "drag") {
       lastTapAt.current = null;
@@ -152,7 +155,10 @@ export function PetWindow() {
     markDrag();
     start.current = null;
     dragged.current = false;
+    setIsDragging(false);
   }
+
+  const displayedPetSrc = resolvePetSprite(petState, customAvatarSrc, isDragging);
 
   return (
     <div className={`pet-shell panel-${panel}`}>
@@ -160,11 +166,11 @@ export function PetWindow() {
       {panel === "workspace" ? (
         <Workspace
           onClose={() => show("pet")}
-          defaultAvatarSrc={penguinUrl}
-          appliedAvatarSrc={avatarSrc}
+          defaultAvatarSrc={PENGU_DEFAULT_SRC}
+          appliedAvatarSrc={customAvatarSrc ?? PENGU_DEFAULT_SRC}
           persistence={persistence}
           onAvatarApplied={(src) => {
-            setAvatarSrc(src);
+            setCustomAvatarSrc(src === PENGU_DEFAULT_SRC ? null : src);
             setAvatarNotice(null);
           }}
           events={agent.events}
@@ -184,7 +190,7 @@ export function PetWindow() {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
         >
-          <img src={avatarSrc} alt="" draggable={false} />
+          <img src={displayedPetSrc} alt="" draggable={false} />
         </button>
       </div>
     </div>

@@ -120,11 +120,24 @@ export class McpStdioClient implements McpServerConnection {
       ? { ...sanitizedArgs, [RESERVED_APPROVAL_TOKEN_FIELD]: approvalToken }
       : sanitizedArgs;
 
+    const rpcParams: Record<string, unknown> = {
+      name: toolName,
+      arguments: wireArgs,
+    };
+    if (approvalToken) {
+      rpcParams._meta = {
+        penguApproval: {
+          approvalId: approvalToken.payload.approvalId,
+          tool: approvalToken.payload.tool,
+          argsHash: approvalToken.payload.argsHash,
+          expiresAt: approvalToken.payload.expiresAt,
+          mac: approvalToken.signature,
+        },
+      };
+    }
+
     try {
-      const res = (await this.sendRequest("tools/call", {
-        name: toolName,
-        arguments: wireArgs,
-      })) as {
+      const res = (await this.sendRequest("tools/call", rpcParams)) as {
         isError?: boolean;
         content?: Array<{ type: string; text?: string }>;
         structuredContent?: unknown;

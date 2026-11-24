@@ -7,13 +7,14 @@ export const canonicalJson = (value: unknown): string => {
 };
 export const sha256 = (value: string): string => createHash('sha256').update(value, 'utf8').digest('hex');
 export const draftContentHash = (to: string, subject: string, body: string): string => sha256(`${to}|${subject}|${body}`);
-export interface ApprovalPayload { approvalId: string; tool: string; argsHash: string; expiresAt: number }
+export interface ApprovalPayload { approvalId: string; tool: string; argsHash: string; expiresAt: number | string }
 export function signApproval(payload: ApprovalPayload, secret = process.env.PENGU_APPROVAL_SECRET): string {
   if (!secret || secret.length < 32) throw new Error('PENGU_APPROVAL_SECRET must contain at least 32 characters');
   return createHmac('sha256', secret).update(canonicalJson(payload)).digest('hex');
 }
 export function verifyApproval(payload: ApprovalPayload, signature: string, secret = process.env.PENGU_APPROVAL_SECRET): boolean {
-  if (!secret || secret.length < 32 || !/^[a-f0-9]{64}$/i.test(signature) || payload.expiresAt <= Date.now()) return false;
+  const expiresMs = typeof payload.expiresAt === 'number' ? payload.expiresAt : Date.parse(payload.expiresAt);
+  if (!secret || secret.length < 32 || !/^[a-f0-9]{64}$/i.test(signature) || !Number.isFinite(expiresMs) || expiresMs <= Date.now()) return false;
   const expected = Buffer.from(signApproval(payload, secret), 'hex');
   const received = Buffer.from(signature, 'hex');
   return expected.length === received.length && timingSafeEqual(expected, received);

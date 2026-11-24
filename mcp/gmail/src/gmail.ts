@@ -87,7 +87,7 @@ export async function getDraft(draftId: string): Promise<DraftPreview> {
   const subject = header(headers, 'Subject');
   return { draftId, threadId: message.threadId ?? undefined, to, subject, body, contentHash: draftContentHash(to, subject, body) };
 }
-export async function sendDraft(input: { draftId: string; contentHash: string; _authorization?: { approvalId: string; tool: string; argsHash: string; expiresAt: number; signature: string } }) {
+export async function sendDraft(input: { draftId: string; contentHash: string; _authorization?: { approvalId: string; tool: string; argsHash: string; expiresAt: number | string; signature: string } }) {
   stubGuard();
   const auth = input._authorization;
   if (!auth || auth.tool !== 'gmail_send_draft' || auth.argsHash !== sha256(canonicalJson({ draftId: input.draftId, contentHash: input.contentHash })) || !verifyApproval({ approvalId: auth.approvalId, tool: auth.tool, argsHash: auth.argsHash, expiresAt: auth.expiresAt }, auth.signature)) {

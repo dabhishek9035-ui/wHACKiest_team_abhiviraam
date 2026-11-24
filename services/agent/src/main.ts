@@ -26,6 +26,7 @@ import type { ScopeConfig } from "./policy/scope.js";
 import { AgentRuntimeLoop } from "./runtime/loop.js";
 import { resolveWsAuthToken } from "./server/auth.js";
 import { AgentWsServer } from "./server/ws.js";
+import { createVoiceService } from "./voice/routes.js";
 
 /**
  * Fallback in-memory StoreApi used only when M4's @pengu/store SQLite adapter
@@ -244,7 +245,7 @@ export async function startAgent(options: StartAgentOptions = {}) {
     authToken: wsAuthToken,
     runtime,
     store,
-    voice: options.voice,
+    voice: options.voice ?? createVoiceService(),
   });
 
   const bound = await wsServer.start();

@@ -9,7 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx src/main.ts",
     "start": "node dist/main.js",
-    "test": "node --test --import tsx test/policy.test.ts test/runtime.test.ts",
+    "test": "node --test --import tsx test/policy.test.ts test/runtime.test.ts src/voice/test/languages.test.ts",
     "smoke:glm": "tsx src/llm/glm-client.ts --smoke"
   },
   "dependencies": {
