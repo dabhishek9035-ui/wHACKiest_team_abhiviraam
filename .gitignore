@@ -1,22 +1,43 @@
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Build outputs
 dist/
-*.tsbuildinfo
+build/
+target/
 .vite/
 coverage/
+*.tsbuildinfo
 
-# secrets — never commit real values
+# Secrets & environment
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+credentials.json
+token.json
 
-# local runtime data
-*.log
+# Local runtime state & SQLite databases
 *.db
 *.db-journal
 *.db-wal
 *.db-shm
+*.sqlite
+*.sqlite3
+.pengu/
 .tmp/
+logs/
+*.log
 
-# OS noise
-Thumbs.db
+# OS & IDE
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local / temporary
+samosh
+samosha/
+pengu_github_ready.zip

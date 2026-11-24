@@ -1,5 +1,10 @@
-// owner: M1
-// purpose: barrel export of all contract types
-// public interface it must expose: re-exports events, tools, approval, store-api, voice-api
-// consumed by: everyone
-// TODO: implement (canonical scaffold placeholder — header only, no code, section 8)
+/**
+ * owner: M1 (Ronit Kapar)
+ * purpose: Barrel export for all frozen Pengu contracts (@pengu/contracts).
+ */
+
+export * from "./events.js";
+export * from "./tools.js";
+export * from "./approval.js";
+export * from "./store-api.js";
+export * from "./voice-api.js";

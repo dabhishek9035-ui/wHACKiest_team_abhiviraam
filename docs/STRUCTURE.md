@@ -1,171 +1,161 @@
-# Pengu — Per-member file structure and ownership
+# Pengu Repository Structure & Ownership (`docs/STRUCTURE.md`)
 
-**Maintainer:** M4 — D Venkata Abhishek (`1TD25CS079`) per workstream prompt step 2, with detail for `packages/store`, `mcp/local`, `scripts/` and `tests/e2e/`. M1 (Ronit Kapar, technical lead) owns this document's final structure and may restructure; the M1/M2/M3 one-liners below track their scaffold placeholders and will be refined when those packages land.
+- **Owner:** M1 — Ronit Kapar (`1BY25CS253`), Technical Lead
+- **Project/Team Lead & Integration Owner:** M4 — D Venkata Abhishek (`1TD25CS079`)
+- **Rule:** Only the listed owner edits files inside their folders. Changes to `packages/contracts/**` or `docs/CONTRACTS.md` go through **M1** and must be announced to all workstreams; **M4** validates and merges PRs into `main`.
 
-**Rule:** folder ownership is exclusive — only the owner edits their folders. Need a change elsewhere? Ask the owner (PR or message). `packages/contracts` changes only via M1, announced to everyone.
+## 1. Workstream Ownership Summary
 
-## Who talks to whom
+| Workstream | Owner | Owned Folders & Files | Must Not Touch | Ask For Changes |
+|---|---|---|---|---|
+| **M1** | Ronit Kapar (`1BY25CS253`) | Root config (`README.md`, `.gitignore`, `.env.example`, `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`), `docs/{STRUCTURE,CONTRACTS,DECISIONS}.md`, `packages/contracts/**`, `services/agent/**` (except `src/voice/**`) | `apps/desktop/**`, `mcp/gmail/**`, `services/agent/src/voice/**`, `mcp/local/**`, `packages/store/**`, `fixtures/**`, `scripts/**` | M2 (UI), M3 (Gmail/Voice), M4 (Local/Store/Integration) |
+| **M2** | Suparna Darsi (`1BY25CS303`) | `apps/desktop/**` | `packages/contracts/**`, `services/agent/**`, `packages/store/**`, `mcp/**` | M1 (WS events / preview schema), M4 (integration merges) |
+| **M3** | Maneesha G (`1BY25CS170`) | `mcp/gmail/**`, `services/agent/src/voice/**`, `fixtures/emails/**` | `packages/contracts/**`, `services/agent/src/{server,llm,runtime,mcp,policy}/**`, `apps/desktop/**`, `mcp/local/**`, `packages/store/**` | M1 (contracts / WS mounting / token format), M4 (E2E/merges) |
+| **M4** | D Venkata Abhishek (`1TD25CS079`) | `packages/store/**`, `mcp/local/**`, `fixtures/web/**`, `scripts/**`, `tests/e2e/**`, `docs/DEMO_SCRIPT.md`, `docs/INTEGRATION.md` | `packages/contracts/**` (propose via M1), `services/agent/**`, `apps/desktop/**`, `mcp/gmail/**` | M1 (contracts/runtime), M2 (UI), M3 (Gmail/Voice) |
 
-| From | To | Via |
-|---|---|---|
-| M2 UI | M1 agent | WebSocket JSON events (7.1) on `ws://127.0.0.1:7777`, per-launch token |
-| M1 agent | M3 gmail / M4 local | MCP over stdio (spawned child processes; tool manifests read by policy) |
-| M1 agent | M4 store | `PenguStore` API (7.4) — every task/step/checkpoint/approval/receipt/side-effect |
-| M1 agent | M3 voice | `transcribe`/`synthesize` routes mounted on the WS server (7.5) |
-| M1 policy gate | UI | `approval.requested.preview` — UI renders, never computes risk, never sees tokens |
-| everyone | everyone | contracts in `packages/contracts` (frozen by M1) |
+## 2. Who Talks To Whom (Runtime & Contract Boundaries)
 
----
+| Caller | Target | Transport / Interface | Notes |
+|---|---|---|---|
+| Desktop UI (M2) | Agent Sidecar (M1) | Local WebSocket (`ws://127.0.0.1:7777`) with per-launch auth token | JSON events in `packages/contracts/src/events.ts`. UI never touches MCP, SQLite, Gmail, Sarvam, or approval tokens. |
+| Agent Sidecar (M1) | Sarvam Token Factory | HTTPS `POST /v2/chat/completions` (`glm5.3`) | Server-side only; `SARVAM_API_KEY` from env; `reasoning_content` never sent to UI. |
+| Agent Sidecar (M1) | Voice Routes (M3) | In-process `VoiceService` (`services/agent/src/voice/routes.ts`) | Mounted by `server/ws.ts` for `voice.audio` and `tts.request`. |
+| Agent Sidecar (M1) | SQLite Store (M4) | In-process `StoreApi` (`@pengu/store`) | Called for every task, step, checkpoint, approval audit, receipt, and side effect. |
+| Agent Sidecar (M1) | Gmail MCP (M3) | MCP over stdio (`mcp/gmail`) | Spawns server, reads `tool-manifest.json`, injects reserved approval token server-side on `gmail_send_draft`. |
+| Agent Sidecar (M1) | Local MCP (M4) | MCP over stdio (`mcp/local`) | Spawns server, reads `tool-manifest.json`, injects reserved approval token server-side on `shell_run_restricted`. |
 
-## M1 — Ronit Kapar (`1BY25CS253`) — technical lead
+## 3. Complete File Inventory
 
-**Owns:** root files, `packages/contracts/**`, `services/agent/**` (except `src/voice`), `docs/{STRUCTURE,CONTRACTS,DECISIONS}.md`, `README.md`.
-**May not touch:** any other member's folders. **Ask M1 for:** contracts, stack, root config changes.
+### Root & Shared Docs
 
-| File | One line |
-|---|---|
-| `README.md` | project overview, clean-clone run instructions (M4 drafted the working version; M1 owns final content) |
-| `package.json` / `pnpm-workspace.yaml` / `tsconfig.base.json` | pnpm workspace root: scripts + strict TS base config (functional; M1 owns final shape) |
-| `.gitignore` / `.env.example` | ignores dist/node_modules/secrets; env variable NAMES only |
-| `packages/contracts/src/index.ts` | barrel re-export of all contract types |
-| `packages/contracts/src/events.ts` | WS event types: `user.message`, `task.*`, `approval.*`, `pet.state`, `voice.*`, `tts.*` (7.1) |
-| `packages/contracts/src/tools.ts` | `ToolManifest`/`ToolEntry` schema with riskClass, scope, previewTool (7.2) |
-| `packages/contracts/src/approval.ts` | preview + HMAC token types `{approvalId, tool, argsHash, expiresAt, mac}` (7.3) |
-| `packages/contracts/src/store-api.ts` | `PenguStore` interface (7.4) — M4's store implements it |
-| `packages/contracts/src/voice-api.ts` | `transcribe`/`synthesize` signatures + capability table shape (7.5) |
-| `services/agent/src/main.ts` | entrypoint: WS server on 127.0.0.1:7777, spawns MCP servers, mounts policy + voice |
-| `services/agent/src/server/ws.ts` | WS event server implementing contract 7.1 both directions |
-| `services/agent/src/server/auth.ts` | per-launch `PENGU_WS_TOKEN` issue/verify |
-| `services/agent/src/llm/glm-client.ts` | GLM via Sarvam `/v2`, fixed configured model, tool calling |
-| `services/agent/src/llm/prompts.ts` | prompt assembly: trusted user text separate from untrusted retrieved content |
-| `services/agent/src/runtime/loop.ts` | plan → tool call → result → next step; every call through the policy gate |
-| `services/agent/src/runtime/planner.ts` | request → step plan (tool/server/kind) |
-| `services/agent/src/runtime/lifecycle.ts` | task lifecycle events; "completed" only after verification |
-| `services/agent/src/runtime/resume.ts` | resume flow 7.6: checks, verifiers, fresh approvals |
-| `services/agent/src/mcp/client.ts` | MCP stdio client; injects reserved `_meta.penguApproval` server-side |
-| `services/agent/src/mcp/registry.ts` | spawns both servers, lists tools, loads + validates manifests |
-| `services/agent/src/mcp/servers.config.json` | which servers to spawn and with what env |
-| `services/agent/src/policy/classify.ts` | manifest-based READ/ROUTINE/CONSEQUENTIAL classification |
-| `services/agent/src/policy/scope.ts` | granted-scope checks (roots/accounts/apps) |
-| `services/agent/src/policy/hard-deny.ts` | deny-by-default rules: unknown class, missing manifest, unsafe command |
-| `services/agent/src/policy/approval-gate.ts` | exact-action preview via previewTool, pause/resume, invalidation |
-| `services/agent/src/policy/token.ts` | HMAC-SHA256 token issue/verify with `PENGU_APPROVAL_SECRET` |
-| `services/agent/src/policy/policy.rules.json` | declarative policy rules |
-| `services/agent/test/policy.test.ts` · `runtime.test.ts` | policy-gate and runtime-loop unit tests (replay LLM, tests only) |
-| `docs/STRUCTURE.md` | this document (M1 owns final structure) |
-| `docs/CONTRACTS.md` | prose form of section 7 contracts |
-| `docs/DECISIONS.md` | verified GLM/Sarvam config, stack decisions |
+- `README.md` [M1] — Monorepo overview, setup steps, honest claims, and doc links.
+- `.gitignore` [M1] — Ignores `node_modules`, build artifacts, SQLite files, logs, and `.env`/secret files.
+- `.env.example` [M1] — Required environment variable names only (`SARVAM_API_KEY`, `PENGU_APPROVAL_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `PENGU_WS_TOKEN`, `PENGU_LOG_LEVEL`).
+- `package.json` [M1] — Root workspace scripts and shared TypeScript devDependencies.
+- `pnpm-workspace.yaml` [M1] — Declares `packages/*`, `services/*`, `mcp/*`, `apps/*`.
+- `tsconfig.base.json` [M1] — Strict shared TypeScript compiler configuration.
+- `docs/STRUCTURE.md` [M1] — File ownership, boundaries, and communication matrix.
+- `docs/CONTRACTS.md` [M1] — Prose specification of frozen Section 7 contracts.
+- `docs/DECISIONS.md` [M1] — Stack decisions, verified Sarvam API specs, and smoke-test record.
+- `docs/INTEGRATION.md` [M4 owns, all contribute] — Dependency graph, DoD, handshake tests, G0–G5 gates, merge rules, demo flow.
+- `docs/DEMO_SCRIPT.md` [M4] — Timed presentation script, failure-case demo, backup recording plan.
 
-## M2 — Suparna Darsi (`1BY25CS303`) — desktop UI
+### `packages/contracts/` [M1]
 
-**Owns:** `apps/desktop/**`. **Ask M2 for:** UI/UX, mock events, avatar behaviour.
+- `packages/contracts/README.md` — Package purpose, owner, and freeze rules.
+- `packages/contracts/src/index.ts` — Barrel export for all frozen contract types and constants.
+- `packages/contracts/src/events.ts` — Exports `ClientMessage`, `ServerEvent`, `TaskSummaryItem`, `PetState`, `StepStatus`, `TaskTerminalStatus`; consumed by M1 WS server and M2 UI.
+- `packages/contracts/src/tools.ts` — Exports `RiskClass`, `ToolManifest`, `ToolManifestEntry`, `UntrustedToolResult`, canonical tool names; consumed by M1, M3, M4.
+- `packages/contracts/src/approval.ts` — Exports `ApprovalPreview`, `ApprovalTokenPayload`, `SignedApprovalToken`, `RESERVED_APPROVAL_TOKEN_FIELD`; consumed by M1, M2, M3, M4.
+- `packages/contracts/src/store-api.ts` — Exports `StoreApi` and all persistence record shapes; implemented by M4, consumed by M1.
+- `packages/contracts/src/voice-api.ts` — Exports `VoiceService`, `TranscribeInput/Output`, `SynthesizeInput/Output`, language table types; implemented by M3, consumed by M1.
 
-| File | One line |
-|---|---|
-| `apps/desktop/src-tauri/tauri.conf.json` | frameless, transparent, always-on-top window config |
-| `apps/desktop/src-tauri/src/main.rs` | Tauri shell entrypoint |
-| `apps/desktop/src/main.tsx` | React root: pet + workspace, WS client, state |
-| `apps/desktop/src/windows/PetWindow.tsx` | floating pet: tap→composer, double-tap→workspace, drag-safe |
-| `apps/desktop/src/windows/Composer.tsx` | compact typed-request composer |
-| `apps/desktop/src/windows/Workspace.tsx` | tabs: Chat / Activity / History / Pending |
-| `apps/desktop/src/components/ChatPanel.tsx` | messages + step summaries |
-| `apps/desktop/src/components/ActivityTimeline.tsx` | execution timeline: step/tool/server/risk/state/approvals |
-| `apps/desktop/src/components/HistoryList.tsx` | A12 history from store results |
-| `apps/desktop/src/components/PendingTasks.tsx` | A13 restore view: Continue/Cancel/Leave |
-| `apps/desktop/src/components/ApprovalModal.tsx` | renders exact preview; disables expired/invalid approvals |
-| `apps/desktop/src/components/AvatarPicker.tsx` | choose/preview/apply/persist/reset avatar |
-| `apps/desktop/src/components/MicButton.tsx` | capture → `voice.audio` |
-| `apps/desktop/src/components/StatusBadge.tsx` | pet state badge (7 states) |
-| `apps/desktop/src/state/wsClient.ts` | WS client with token + reconnect/status |
-| `apps/desktop/src/state/store.ts` | events → renderable UI state |
-| `apps/desktop/src/state/avatar.ts` | avatar persistence in Tauri app data |
-| `apps/desktop/src/mock/scriptedEvents.ts` · `mockServer.ts` | contract-faithful event mock for UI-first development |
-| `apps/desktop/src/assets/` | default penguin asset |
+### `services/agent/` [M1, except `src/voice/` M3]
 
-## M3 — Maneesha G (`1BY25CS170`) — Gmail MCP + voice
+- `services/agent/README.md` — Agent sidecar overview, env vars, and DoD verification commands.
+- `services/agent/src/main.ts` — Sidecar bootstrap wiring store, MCP registry, policy gate, GLM client, runtime loop, voice routes, and WS server.
+- `services/agent/src/server/ws.ts` — Authenticated `127.0.0.1:7777` WebSocket server implementing Section 7.1 events and mounting M3 voice routes.
+- `services/agent/src/server/auth.ts` — Per-launch WebSocket auth token loader/generator and constant-time validator.
+- `services/agent/src/llm/glm-client.ts` — Sarvam `/v2/chat/completions` client locked to `glm5.3` with native tool calling, strict-JSON fallback, and test-only replay mode.
+- `services/agent/src/llm/prompts.ts` — System and turn prompt builders isolating trusted user intent from untrusted external tool content.
+- `services/agent/src/runtime/loop.ts` — Core execution loop coordinating plan -> policy gate -> approval pause/resume -> MCP call -> receipt -> checkpoint.
+- `services/agent/src/runtime/planner.ts` — Converts GLM proposals into observable steps and safe UI summaries (never exposes `reasoning_content`).
+- `services/agent/src/runtime/lifecycle.ts` — Task state machine, honest terminal status resolution, and `pet.state` mapping.
+- `services/agent/src/runtime/resume.ts` — Section 7.6 restart-safe resume orchestrator using M4 store and M3/M4 side-effect verifiers.
+- `services/agent/src/mcp/client.ts` — MCP stdio JSON-RPC client spawning child servers and injecting reserved server-side approval tokens.
+- `services/agent/src/mcp/registry.ts` — Loads `servers.config.json` and each server's `tool-manifest.json`, validates schemas, denies unknown tools.
+- `services/agent/src/mcp/servers.config.json` — Stdio launch configuration for `gmail` and `local` MCP servers.
+- `services/agent/src/policy/classify.ts` — Fail-closed manifest risk classifier (`READ` / `ROUTINE` / `CONSEQUENTIAL` / `DENY`).
+- `services/agent/src/policy/scope.ts` — Checks granted Gmail scope, approved filesystem roots, HTTP(S) URLs, and allowlisted app/command IDs.
+- `services/agent/src/policy/hard-deny.ts` — Blocks unknown/unsafe shell commands, path traversal, non-HTTP(S) schemes, and untrusted-originated commands (never approvable).
+- `services/agent/src/policy/approval-gate.ts` — Coordinates policy checks, `previewTool` invocation, canonical `argsHash`, approval pause, expiry, invalidation, and HMAC minting.
+- `services/agent/src/policy/token.ts` — Deterministic `canonicalJSON`, SHA-256 `argsHash`/`contentHash`, and HMAC-SHA256 sign/verify.
+- `services/agent/src/policy/policy.rules.json` — Declarative risk, expiry, and hard-deny rule configuration.
+- `services/agent/src/voice/stt.ts` [M3] — Sarvam Saaras v4 STT client.
+- `services/agent/src/voice/tts.ts` [M3] — Sarvam Bulbul TTS client returning audio or `{unsupported:true, reason}`.
+- `services/agent/src/voice/languages.ts` [M3] — Verified STT and TTS language capability tables.
+- `services/agent/src/voice/routes.ts` [M3] — Exports `VoiceService` mounted by M1's `server/ws.ts`.
+- `services/agent/test/policy.test.ts` [M1] — Policy gate, hard-deny, HMAC token, expiry, and draft-edit invalidation tests (T-03, T-04, T-05).
+- `services/agent/test/runtime.test.ts` [M1] — Runtime loop, MCP registry, hostile-content isolation (T-08), and restart/resume deduplication tests (T-06, T-07).
 
-**Owns:** `mcp/gmail/**`, `services/agent/src/voice/**`, `fixtures/emails/**`.
-**Ask M3 for:** OAuth setup, Gmail scopes, voice languages, email fixtures.
+### `packages/store/` [M4]
 
-| File | One line |
-|---|---|
-| `mcp/gmail/tool-manifest.json` | 5 gmail tools per 7.2; `gmail_send_draft` CONSEQUENTIAL + previewTool |
-| `mcp/gmail/src/server.ts` | Gmail MCP stdio server |
-| `mcp/gmail/src/auth.ts` | OAuth desktop flow; tokens in OS credential store, never logged |
-| `mcp/gmail/src/tools/search.ts` / `read-thread.ts` | READ tools; bodies wrapped `{untrusted:true, content}` |
-| `mcp/gmail/src/tools/create-draft.ts` | ROUTINE draft; recipient from authorized thread/args only |
-| `mcp/gmail/src/tools/get-draft.ts` | READ; returns to/subject/body + `contentHash` (send's previewTool) |
-| `mcp/gmail/src/tools/send-draft.ts` | CONSEQUENTIAL; re-fetch → recompute hash → verify token → duplicate-safe send; exports "was this draft sent?" verifier |
-| `mcp/gmail/src/untrusted.ts` | untrusted-content wrapper |
-| `mcp/gmail/src/verify-token.ts` | independent HMAC token verification (second line of defence) |
-| `services/agent/src/voice/stt.ts` / `tts.ts` | Sarvam Saaras STT / Bulbul TTS |
-| `services/agent/src/voice/languages.ts` | capability table from current docs (STT ≠ TTS coverage) |
-| `services/agent/src/voice/routes.ts` | `voice.audio`→transcript; `tts.request`→audio/unsupported |
-| `fixtures/emails/normal-thread.md` · `hostile-email.md` | benign + injection fixtures (A15 email half) |
+- `packages/store/README.md` — Store overview and SQLite transaction guarantees.
+- `packages/store/src/index.ts` — Exports SQLite `StoreApi` and early in-memory stub.
+- `packages/store/src/schema.sql` — SQLite DDL for tasks, steps, checkpoints, approvals, receipts, side_effects.
+- `packages/store/src/tasks.ts` — Task CRUD and status transition queries.
+- `packages/store/src/steps.ts` — Step append/update queries.
+- `packages/store/src/checkpoints.ts` — Atomic checkpoint save/load.
+- `packages/store/src/approvals.ts` — Approval audit trail persistence.
+- `packages/store/src/receipts.ts` — Verified execution receipt storage.
+- `packages/store/src/sideeffects.ts` — `beginSideEffect`, `completeSideEffect`, `getSideEffect`.
+- `packages/store/src/restore.ts` — Pending-task restore summary builder (no secrets/private bodies).
+- `packages/store/test/store.test.ts` — Store unit tests.
+- `packages/store/test/restore.test.ts` — Restart/restore unit tests.
 
-## M4 — D Venkata Abhishek (`1TD25CS079`) — local MCP, store, QA
+### `mcp/gmail/` [M3]
 
-**Owns:** `packages/store/**`, `mcp/local/**`, `fixtures/web/**`, `scripts/**`, `tests/e2e/**`, `docs/{INTEGRATION,DEMO_SCRIPT}.md`. **Ask M4 for:** store API, local scopes/allowlist, security tests, integration merges.
+- `mcp/gmail/README.md` — Gmail MCP server setup, OAuth scopes, and stub mode docs.
+- `mcp/gmail/tool-manifest.json` — Risk class, scope, and previewTool declarations for all 5 Gmail tools.
+- `mcp/gmail/src/server.ts` — MCP stdio entrypoint and `PENGU_GMAIL_STUB=1` support.
+- `mcp/gmail/src/auth.ts` — Desktop OAuth flow and secure external token storage.
+- `mcp/gmail/src/untrusted.ts` — Wraps external email bodies/attachments as `{untrusted:true, content}`.
+- `mcp/gmail/src/verify-token.ts` — Server-side HMAC-SHA256 verification against live draft `contentHash`.
+- `mcp/gmail/src/tools/search.ts` — `gmail_search_threads` (READ).
+- `mcp/gmail/src/tools/read-thread.ts` — `gmail_read_thread` (READ, untrusted-wrapped).
+- `mcp/gmail/src/tools/create-draft.ts` — `gmail_create_draft` (ROUTINE).
+- `mcp/gmail/src/tools/get-draft.ts` — `gmail_get_draft` (READ, returns `contentHash`).
+- `mcp/gmail/src/tools/send-draft.ts` — `gmail_send_draft` (CONSEQUENTIAL, duplicate-safe) + sent verifier.
 
-### `packages/store` (all implemented ✅)
+### `mcp/local/` [M4]
 
-| File | One line |
-|---|---|
-| `src/schema.sql` | six tables (tasks, steps, checkpoints, approvals, receipts, side_effects) + indexes; copied to `dist/` at build |
-| `src/types.ts` | record types, status unions, `PENDING_TASK_STATUSES`, `StoreError`, id/time helpers |
-| `src/sqlitedb.ts` | `SqlDatabase` driver interface; better-sqlite3 adapter + `node:sqlite` fallback; `loadSchemaSql` |
-| `src/tasks.ts` | SQLite tasks repo: create/get/list/listPending/setTaskStatus (+ pauseReason folding) |
-| `src/steps.ts` | SQLite steps repo: append (auto idx)/update/list; touches parent task `updated_at` |
-| `src/checkpoints.ts` | single-row atomic upsert save/load with validation (crash-safe) |
-| `src/approvals.ts` | upsert-by-approvalId records; get/list by task/tool |
-| `src/receipts.ts` | verified-result receipts; list by task/tool |
-| `src/sideeffects.ts` | idempotent begin (intent persisted BEFORE execute); complete requires begun; completed re-complete = no-op |
-| `src/sqlite.ts` | `SqliteStore` composing the six repos into `PenguStore` |
-| `src/memory.ts` | `MemoryStore` — same interface/semantics with snapshot-rollback transactions |
-| `src/restore.ts` | `buildRestoreView` (A13 payload per 7.1) + `reconcileSideEffects` (verify/retry/ask_user, A14) + `defaultVerifiers` |
-| `src/index.ts` | `PenguStore` interface, `createSqliteStore(dbPath)` / `createMemoryStore()` factories, re-exports |
-| `test/store.test.ts` | contract suite over BOTH backends: lifecycle, steps, checkpoint round-trip, approvals, receipts, side effects, transaction rollback |
-| `test/restore.test.ts` | restore-view shape, verifier verdicts, reconcile outcomes, MemoryStore parity |
+- `mcp/local/README.md` — Local MCP server docs explicitly stating allowlist runner is not an OS sandbox.
+- `mcp/local/tool-manifest.json` — Manifest for all 6 local tools.
+- `mcp/local/config/local-scopes.json` — Approved filesystem roots and allowlisted app IDs.
+- `mcp/local/config/command-allowlist.json` — Allowlisted PowerShell command IDs, argument schemas, cwd, timeout, and output cap.
+- `mcp/local/src/server.ts` — MCP stdio entrypoint.
+- `mcp/local/src/verify-token.ts` — Server-side HMAC-SHA256 verifier for `shell_run_restricted`.
+- `mcp/local/src/tools/create-folder.ts` — `fs_create_folder` (ROUTINE, idempotent, traversal/symlink-safe).
+- `mcp/local/src/tools/list-dir.ts` — `fs_list_dir` (READ, scoped).
+- `mcp/local/src/tools/open-url.ts` — `browser_open_url` (ROUTINE, http/https only).
+- `mcp/local/src/tools/launch-app.ts` — `app_launch` (ROUTINE, allowlisted app IDs).
+- `mcp/local/src/tools/shell-describe.ts` — `shell_describe_command` (READ preview tool).
+- `mcp/local/src/tools/shell-run.ts` — `shell_run_restricted` (CONSEQUENTIAL, allowlist + HMAC verified).
+- `mcp/local/src/platform/windows.ts` — Windows 10/11 process/Chrome/PowerShell adapter.
 
-### `mcp/local` (all implemented ✅)
+### `apps/desktop/` [M2]
 
-| File | One line |
-|---|---|
-| `tool-manifest.json` | manifest per 7.2 (risk classes, scopes, previewTool, requiresApprovalToken, verifiability notes) |
-| `config/local-scopes.json` | granted fs roots (env-expanded), URL policy, allowed apps — the only place paths/apps are configured |
-| `config/command-allowlist.json` | read-only/info command IDs (`sys.time`, `sys.disk`, `sys.ipconfig`, `sys.process_list`, `sys.process_info`) with arg patterns + templates |
-| `src/server.ts` | config loading (+ root auto-create), transport-independent core `callTool`, MCP stdio wiring, `_meta.penguApproval` extraction |
-| `src/verify-token.ts` | canonicalJSON, `argsHashOf`, HMAC sign (test/gate parity) + full verify (shape/signature/expiry/tool/hash, timing-safe) |
-| `src/types.ts` | denial codes, config shapes, `ToolContext`, `ApprovalMeta` |
-| `src/tools/create-folder.ts` | scoped idempotent create; re-verifies realpath containment after mkdir |
-| `src/tools/list-dir.ts` | scoped listing; names/types only, capped, never file contents |
-| `src/tools/open-url.ts` | scheme allowlist, credential/blocked-host refusal, Chrome launch |
-| `src/tools/launch-app.ts` | allowlisted appId only; fire-and-forget launch, `verifiable:false` |
-| `src/tools/shell-describe.ts` | allowlist resolution, strict arg validation, resolved cwd, exact-action preview payload |
-| `src/tools/shell-run.ts` | unknown/bad-args denial ⇒ not approvable; token verify vs `{commandId,args,cwd}` hash; capped no-shell execution |
-| `src/platform/windows.ts` | %VAR% expansion, realpaths, containment, junction-aware escape detection, Chrome discovery (explicit path fails closed), clean-env spawn with caps |
-| `test/local-server.test.ts` | 24 policy tests: scoping, traversal, junction escape, unknown command, invalid args, all token failure modes + real allowlisted run, manifest contract check |
-| `README.md` | security model + honest "allowlist runner, not a sandbox" statement |
+- `apps/desktop/README.md` — Tauri + React UI setup and mock/live verification instructions.
+- `apps/desktop/src-tauri/tauri.conf.json` — Frameless transparent always-on-top window config.
+- `apps/desktop/src-tauri/src/main.rs` — Rust commands for window control, avatar persistence, and WS token retrieval.
+- `apps/desktop/src/main.tsx` — React entrypoint.
+- `apps/desktop/src/windows/PetWindow.tsx` — Floating draggable pet with tap/double-tap detection.
+- `apps/desktop/src/windows/Composer.tsx` — Compact quick composer above pet.
+- `apps/desktop/src/windows/Workspace.tsx` — Full tabbed workspace (Chat, Activity, History, Pending).
+- `apps/desktop/src/components/ChatPanel.tsx` — Conversation panel + TTS playback/unsupported notices.
+- `apps/desktop/src/components/ActivityTimeline.tsx` — Live step timeline with redaction-by-default.
+- `apps/desktop/src/components/HistoryList.tsx` — Past tasks and honest outcomes.
+- `apps/desktop/src/components/PendingTasks.tsx` — Startup restore view with Continue/Cancel/Leave.
+- `apps/desktop/src/components/ApprovalModal.tsx` — Exact-action preview modal; disables expired/invalidated approvals.
+- `apps/desktop/src/components/AvatarPicker.tsx` — Choose PNG/JPG/WebP, preview, apply, persist, reset.
+- `apps/desktop/src/components/MicButton.tsx` — Audio capture -> `voice.audio`, renders transcript/TTS.
+- `apps/desktop/src/components/StatusBadge.tsx` — Distinct honest badges for all terminal/active states.
+- `apps/desktop/src/state/wsClient.ts` — Authenticated WS client with reconnect.
+- `apps/desktop/src/state/store.ts` — Frontend reactive store.
+- `apps/desktop/src/state/avatar.ts` — Tauri app-data avatar persistence.
+- `apps/desktop/src/mock/scriptedEvents.ts` — Realistic scripted event fixtures.
+- `apps/desktop/src/mock/mockServer.ts` — Local mock WS server for independent UI testing.
+- `apps/desktop/src/assets/default-penguin.placeholder.txt` — Default penguin asset slot.
 
-### `scripts/` (all implemented ✅)
+### `fixtures/`, `scripts/`, `tests/e2e/`
 
-| File | One line |
-|---|---|
-| `dev.ps1` | prerequisite/env-name checks, build, honest component-readiness table, start order, `-LocalOnly` stdio mode |
-| `restart-test.ps1` | A13/A14 evidence generator: phase A run → `Stop-Process -Force` mid-task → phase B relaunch assertions |
-| `inject-test.ps1` | A15 web-half evidence generator: serves fixture on loopback:8099, runs probe, stops server |
-| `restart-harness.mjs` | node harness: phase A persists intent + creates folder + idles; phase B asserts restore, reconcile, no duplicates, resume |
-| `inject-serve.mjs` | minimal loopback static server for the hostile fixture |
-| `inject-probe.mjs` | extracts `data-pengu-*` payloads, feeds each to the Local MCP core, asserts every attack denied + sandbox untouched |
-
-### `tests/e2e/` + `fixtures/web/` + `docs/` (M4-owned docs ✅)
-
-| File | One line |
-|---|---|
-| `tests/e2e/e2e-local-actions.md` | A10/A11/A12 procedure with pass criteria |
-| `tests/e2e/e2e-restart.md` | A13/A14 procedure incl. Gmail restart leg + duplicate-safety spot check |
-| `tests/e2e/e2e-injection.md` | A15 web+email procedure; automated server-half + model-half steps |
-| `tests/e2e/e2e-email-draft-send.md` | A6–A8/A14 email procedure incl. refusal matrix |
-| `fixtures/web/hostile-page.html` | A15 fixture with machine-readable `data-pengu-*` attack payloads |
-| `docs/INTEGRATION.md` | dependency graph, per-member DoD, handshake tests T-01…T-12, gates, run book, sign-off |
-| `docs/DEMO_SCRIPT.md` | timed A1–A15 walkthrough, deliberate failure case, backup plan, QA checklist |
+- `fixtures/emails/normal-thread.md` [M3] — Benign thread fixture (A6/A7/A8).
+- `fixtures/emails/hostile-email.md` [M3] — Prompt-injection email fixture (A15/T-08).
+- `fixtures/web/hostile-page.html` [M4] — Prompt-injection web page fixture (A15).
+- `scripts/dev.ps1` [M4] — Ordered Windows startup script.
+- `scripts/restart-test.ps1` [M4] — Automated forced-kill + relaunch continuity test (A13/A14).
+- `scripts/inject-test.ps1` [M4] — Automated hostile-content isolation test (A15).
+- `tests/e2e/e2e-email-draft-send.md` [M4] — E2E email read/draft/approved send procedure.
+- `tests/e2e/e2e-local-actions.md` [M4] — E2E local tools and restricted PowerShell procedure.
+- `tests/e2e/e2e-restart.md` [M4] — E2E crash/restart and deduplication procedure.
+- `tests/e2e/e2e-injection.md` [M4] — E2E hostile email and web injection procedure.
