@@ -13,6 +13,7 @@
     "core:window:allow-scale-factor",
     "allow-load-avatar",
     "allow-save-avatar",
-    "allow-reset-avatar"
+    "allow-reset-avatar",
+    "allow-get-ws-token"
   ]
 }

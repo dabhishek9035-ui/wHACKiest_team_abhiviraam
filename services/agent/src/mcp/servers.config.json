@@ -3,15 +3,15 @@
     {
       "id": "gmail",
       "command": "node",
-      "args": ["../../mcp/gmail/dist/server.js"],
-      "manifestPath": "../../mcp/gmail/tool-manifest.json",
+      "args": ["../../../../mcp/gmail/dist/server.js"],
+      "manifestPath": "../../../../mcp/gmail/tool-manifest.json",
       "enabled": true
     },
     {
       "id": "local",
       "command": "node",
-      "args": ["../../mcp/local/dist/server.js"],
-      "manifestPath": "../../mcp/local/tool-manifest.json",
+      "args": ["../../../../mcp/local/dist/server.js"],
+      "manifestPath": "../../../../mcp/local/tool-manifest.json",
       "enabled": true
     }
   ]

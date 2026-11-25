@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-load-avatar"
+description = "Enables the load_avatar command without any pre-configured scope."
+commands.allow = ["load_avatar"]
+
+[[permission]]
+identifier = "deny-load-avatar"
+description = "Denies the load_avatar command without any pre-configured scope."
+commands.deny = ["load_avatar"]
