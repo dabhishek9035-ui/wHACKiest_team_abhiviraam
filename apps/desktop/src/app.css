@@ -83,6 +83,27 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   margin-bottom: 8px;
 }
 
+.gmail-connect-control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.gmail-connect-control button {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 4px 8px;
+  color: inherit;
+}
+
+.gmail-connect-control span {
+  color: #b7c7dc;
+  font-size: 12px;
+}
+
 .tabs {
   flex-wrap: wrap;
 }

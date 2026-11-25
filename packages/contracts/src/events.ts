@@ -101,6 +101,14 @@ export interface TtsRequestClientEvent {
   language: string;
 }
 
+export interface GmailAuthStatusRequestClientEvent {
+  type: "gmail.auth.status.request";
+}
+
+export interface GmailAuthStartClientEvent {
+  type: "gmail.auth.start";
+}
+
 export type ClientMessage =
   | UserMessageClientEvent
   | ApprovalDecisionClientEvent
@@ -108,7 +116,9 @@ export type ClientMessage =
   | TaskResumeClientEvent
   | TaskCancelClientEvent
   | VoiceAudioClientEvent
-  | TtsRequestClientEvent;
+  | TtsRequestClientEvent
+  | GmailAuthStatusRequestClientEvent
+  | GmailAuthStartClientEvent;
 
 // ---------------------------------------------------------------------------
 // Server -> Client Events
@@ -181,6 +191,12 @@ export interface TtsUnsupportedServerEvent {
   reason: string;
 }
 
+export interface GmailAuthStatusServerEvent {
+  type: "gmail.auth.status";
+  status: "connected" | "not_connected" | "starting" | "failed";
+  message: string;
+}
+
 export interface ErrorServerEvent {
   type: "error";
   code: string;
@@ -198,4 +214,5 @@ export type ServerEvent =
   | VoiceTranscriptServerEvent
   | TtsAudioServerEvent
   | TtsUnsupportedServerEvent
+  | GmailAuthStatusServerEvent
   | ErrorServerEvent;

@@ -3,10 +3,13 @@ export async function transcribeAudio(audio: Buffer, mime: string, languageHint?
   const key = process.env.SARVAM_API_KEY;
   if (!key) throw new Error('SARVAM_API_KEY is required for speech recognition');
   if (!audio.length || audio.length > 20 * 1024 * 1024) throw new Error('Audio must be between 1 byte and 20 MB');
-  const extension = mime.includes('wav') ? 'wav' : mime.includes('webm') ? 'webm' : mime.includes('mpeg') || mime.includes('mp3') ? 'mp3' : mime.includes('mp4') ? 'm4a' : mime.includes('ogg') ? 'ogg' : mime.includes('flac') ? 'flac' : undefined;
+  // MediaRecorder commonly reports values such as `audio/webm;codecs=opus`.
+  // Sarvam accepts the container MIME type, but rejects codec parameters.
+  const contentType = mime.split(';', 1)[0]?.trim().toLowerCase() ?? '';
+  const extension = contentType.includes('wav') ? 'wav' : contentType.includes('webm') ? 'webm' : contentType.includes('mpeg') || contentType.includes('mp3') ? 'mp3' : contentType.includes('mp4') ? 'm4a' : contentType.includes('opus') ? 'opus' : contentType.includes('ogg') ? 'ogg' : contentType.includes('flac') ? 'flac' : undefined;
   if (!extension) throw new Error(`Unsupported audio MIME type: ${mime}`);
   const form = new FormData();
-  form.append('file', new Blob([new Uint8Array(audio)], { type: mime }), `recording.${extension}`);
+  form.append('file', new Blob([new Uint8Array(audio)], { type: contentType }), `recording.${extension}`);
   form.append('model', 'saaras:v4');
   form.append('mode', 'transcribe');
   if (languageHint) form.append('language_code', languageHint);

@@ -54,10 +54,21 @@ export async function connectGmail(): Promise<void> {
         if (url.pathname !== '/oauth2callback') { res.writeHead(404).end(); return; }
         if (url.searchParams.get('state') !== state) throw new Error('OAuth state mismatch');
         const code = url.searchParams.get('code');
-        if (!code) throw new Error(url.searchParams.get('error') ?? 'Google did not return an authorization code');
+        if (!code) {
+          const oauthError = url.searchParams.get('error');
+          if (oauthError === 'access_denied') {
+            throw new Error('Google denied access. If this OAuth app is in Testing, add this Google account under Google Cloud Console → Google Auth Platform → Audience → Test users. A Workspace administrator can also block access.');
+          }
+          throw new Error('Google did not return an authorization code.');
+        }
         res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }).end('Gmail connected. You can close this tab.');
         clearTimeout(timeout); resolve(code);
-      } catch (error) { res.writeHead(400).end('Authorization failed. Return to Pengu terminal.'); clearTimeout(timeout); reject(error); }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Authorization failed.';
+        res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' }).end(message);
+        clearTimeout(timeout);
+        reject(error);
+      }
     });
   }).finally(() => server.close());
   const { tokens } = await client.getToken(authCode);

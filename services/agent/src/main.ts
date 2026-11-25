@@ -4,6 +4,9 @@
  */
 
 import path from "node:path";
+import { spawn, type ChildProcess } from "node:child_process";
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import type {
   ApprovalRecord,
@@ -175,7 +178,16 @@ export async function startAgent(options: StartAgentOptions = {}) {
   const registry = new McpToolRegistry();
 
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
-  const serversConfigPath = path.join(currentDir, "mcp", "servers.config.json");
+  const projectRoot = path.resolve(currentDir, "../../../");
+  // The config lives under src/mcp in development; tsc does not copy JSON files
+  // into dist, so compiled startup needs the source-tree fallback.
+  const configCandidates = [
+    path.join(currentDir, "mcp", "servers.config.json"),
+    path.resolve(currentDir, "..", "src", "mcp", "servers.config.json"),
+  ];
+  const serversConfigPath =
+    configCandidates.find((candidate) => existsSync(candidate)) ??
+    path.join(currentDir, "mcp", "servers.config.json");
   try {
     await registry.loadFromConfigFile(serversConfigPath);
   } catch (err) {
@@ -209,6 +221,7 @@ export async function startAgent(options: StartAgentOptions = {}) {
   };
 
   let wsServer: AgentWsServer;
+  let gmailAuthProcess: ChildProcess | null = null;
 
   const gate = new PolicyApprovalGate({
     approvalSecret,
@@ -246,6 +259,49 @@ export async function startAgent(options: StartAgentOptions = {}) {
     runtime,
     store,
     voice: options.voice ?? createVoiceService(),
+    isGmailConnected: () => {
+      const localAppData = process.env.LOCALAPPDATA ?? path.join(homedir(), "AppData", "Local");
+      return existsSync(path.join(localAppData, "Pengu", "gmail-token.dpapi"));
+    },
+    startGmailAuth: () => {
+      if (gmailAuthProcess && gmailAuthProcess.exitCode === null) return false;
+      const authEntry = path.join(projectRoot, "mcp", "gmail", "dist", "auth-cli.js");
+      if (!existsSync(authEntry)) return false;
+      const child = spawn(process.execPath, [authEntry], {
+        cwd: projectRoot,
+        env: { ...process.env },
+        stdio: ["ignore", "ignore", "pipe"],
+        windowsHide: true,
+      });
+      let authError = "";
+      child.stderr?.on("data", (chunk) => {
+        authError = `${authError}${String(chunk)}`.slice(-4000);
+      });
+      gmailAuthProcess = child;
+      child.once("error", () => {
+        if (gmailAuthProcess === child) gmailAuthProcess = null;
+        wsServer?.broadcast({
+          type: "gmail.auth.status",
+          status: "failed",
+          message: "Could not start Google sign-in. Check the agent setup and try again.",
+        });
+      });
+      child.once("close", (code) => {
+        if (gmailAuthProcess === child) gmailAuthProcess = null;
+        const localAppData = process.env.LOCALAPPDATA ?? path.join(homedir(), "AppData", "Local");
+        const connected = code === 0 && existsSync(path.join(localAppData, "Pengu", "gmail-token.dpapi"));
+        wsServer?.broadcast({
+          type: "gmail.auth.status",
+          status: connected ? "connected" : "failed",
+          message: connected
+            ? "Gmail is connected."
+            : authError.includes("access_denied")
+              ? "Google denied sign-in. If this OAuth app is in Testing, add this Google account under Google Cloud Console → Google Auth Platform → Audience → Test users. A Workspace administrator can also block access."
+              : "Google sign-in did not complete. Select Connect Gmail to try again.",
+        });
+      });
+      return true;
+    },
   });
 
   const bound = await wsServer.start();
@@ -254,6 +310,10 @@ export async function startAgent(options: StartAgentOptions = {}) {
   );
 
   const shutdown = async () => {
+    if (gmailAuthProcess && !gmailAuthProcess.killed) {
+      gmailAuthProcess.kill();
+      gmailAuthProcess = null;
+    }
     await wsServer.stop();
     await registry.closeAll();
   };

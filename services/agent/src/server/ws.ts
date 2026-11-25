@@ -25,6 +25,8 @@ export interface AgentWsServerOptions {
   runtime: AgentRuntimeLoop;
   store: StoreApi;
   voice?: VoiceService;
+  isGmailConnected?: () => boolean;
+  startGmailAuth?: () => boolean;
 }
 
 interface WsClient {
@@ -69,6 +71,8 @@ export class AgentWsServer {
   private readonly runtime: AgentRuntimeLoop;
   private readonly store: StoreApi;
   private readonly voice?: VoiceService;
+  private readonly isGmailConnected: () => boolean;
+  private readonly startGmailAuth?: () => boolean;
   private readonly server: Server;
   private readonly clients = new Set<WsClient>();
 
@@ -80,6 +84,8 @@ export class AgentWsServer {
     this.runtime = options.runtime;
     this.store = options.store;
     this.voice = options.voice;
+    this.isGmailConnected = options.isGmailConnected ?? (() => false);
+    this.startGmailAuth = options.startGmailAuth;
 
     this.server = http.createServer((_req, res) => {
       res.writeHead(426, { "Content-Type": "text/plain" });
@@ -275,6 +281,28 @@ export class AgentWsServer {
         case "task.cancel":
           await this.runtime.handleTaskCancel(msg.taskId);
           break;
+
+        case "gmail.auth.status.request":
+          this.sendTo(client, {
+            type: "gmail.auth.status",
+            status: this.isGmailConnected() ? "connected" : "not_connected",
+            message: this.isGmailConnected()
+              ? "Gmail is connected."
+              : "Connect a Gmail account to search and read mail.",
+          });
+          break;
+
+        case "gmail.auth.start": {
+          const started = this.startGmailAuth?.() ?? false;
+          this.sendTo(client, {
+            type: "gmail.auth.status",
+            status: started ? "starting" : "failed",
+            message: started
+              ? "Google sign-in opened. Finish authorization in your browser."
+              : "Could not start Google sign-in. Check the agent logs and try again.",
+          });
+          break;
+        }
 
         case "voice.audio": {
           if (!this.voice) {
