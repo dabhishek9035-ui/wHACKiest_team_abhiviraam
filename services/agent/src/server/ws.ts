@@ -25,7 +25,7 @@ export interface AgentWsServerOptions {
   runtime: AgentRuntimeLoop;
   store: StoreApi;
   voice?: VoiceService;
-  isGmailConnected?: () => boolean;
+  isGmailConnected?: () => boolean | Promise<boolean>;
   startGmailAuth?: () => boolean;
 }
 
@@ -71,7 +71,7 @@ export class AgentWsServer {
   private readonly runtime: AgentRuntimeLoop;
   private readonly store: StoreApi;
   private readonly voice?: VoiceService;
-  private readonly isGmailConnected: () => boolean;
+  private readonly isGmailConnected: () => boolean | Promise<boolean>;
   private readonly startGmailAuth?: () => boolean;
   private readonly server: Server;
   private readonly clients = new Set<WsClient>();
@@ -282,15 +282,17 @@ export class AgentWsServer {
           await this.runtime.handleTaskCancel(msg.taskId);
           break;
 
-        case "gmail.auth.status.request":
+        case "gmail.auth.status.request": {
+          const connected = await this.isGmailConnected();
           this.sendTo(client, {
             type: "gmail.auth.status",
-            status: this.isGmailConnected() ? "connected" : "not_connected",
-            message: this.isGmailConnected()
+            status: connected ? "connected" : "not_connected",
+            message: connected
               ? "Gmail is connected."
               : "Connect a Gmail account to search and read mail.",
           });
           break;
+        }
 
         case "gmail.auth.start": {
           const started = this.startGmailAuth?.() ?? false;

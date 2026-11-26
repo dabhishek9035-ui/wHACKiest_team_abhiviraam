@@ -4,7 +4,7 @@
 
 import { isTauri } from "@tauri-apps/api/core";
 import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { StatusBadge } from "../components/StatusBadge";
 import { createTauriAvatarPersistence, loadAppliedAvatarSrc } from "../state/avatar";
@@ -19,7 +19,7 @@ export type PetPanel = "pet" | "composer" | "workspace";
 
 const PANEL_SIZE: Record<PetPanel, { width: number; height: number }> = {
   pet: { width: 220, height: 280 },
-  composer: { width: 360, height: 480 },
+  composer: { width: 360, height: 600 },
   workspace: { width: 560, height: 760 },
 };
 
@@ -31,12 +31,22 @@ async function fitWindow(panel: PetPanel): Promise<void> {
   const current = (await win.outerSize()).toLogical(scale);
   const origin = (await win.outerPosition()).toLogical(scale);
   const bottom = origin.y + current.height;
-  await win.setSize(new LogicalSize(next.width, next.height));
+  const monitor = await currentMonitor();
+  const workAreaPosition = monitor?.workArea.position.toLogical(monitor.scaleFactor);
+  const workAreaSize = monitor?.workArea.size.toLogical(monitor.scaleFactor);
+  const width = Math.min(next.width, workAreaSize?.width ?? next.width);
+  const height = Math.min(next.height, workAreaSize?.height ?? next.height);
+  const targetX = origin.x + (current.width - width) / 2;
+  const targetY = bottom - height;
+  const x = workAreaPosition && workAreaSize
+    ? Math.max(workAreaPosition.x, Math.min(targetX, workAreaPosition.x + workAreaSize.width - width))
+    : targetX;
+  const y = workAreaPosition && workAreaSize
+    ? Math.max(workAreaPosition.y, Math.min(targetY, workAreaPosition.y + workAreaSize.height - height))
+    : targetY;
+  await win.setSize(new LogicalSize(width, height));
   await win.setPosition(
-    new LogicalPosition(
-      Math.round(origin.x + (current.width - next.width) / 2),
-      Math.round(bottom - next.height),
-    ),
+    new LogicalPosition(Math.round(x), Math.round(y)),
   );
 }
 

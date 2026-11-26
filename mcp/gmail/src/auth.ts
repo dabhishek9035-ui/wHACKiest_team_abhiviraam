@@ -23,7 +23,7 @@ export async function getOAuthClient(): Promise<OAuth2Client> {
   const { clientId, clientSecret } = credentials();
   const client = new OAuth2Client(clientId, clientSecret);
   const stored = await readProtectedToken();
-  if (!stored) throw new Error('Gmail is not connected. Run `npm run gmail:auth` and complete Google consent.');
+  if (!stored) throw new Error('Gmail is not connected or its saved sign-in is invalid. Select Connect Gmail and sign in again.');
   client.setCredentials(JSON.parse(stored));
   client.on('tokens', async tokens => {
     const current = client.credentials;
@@ -77,6 +77,17 @@ export async function connectGmail(): Promise<void> {
 }
 export async function disconnectGmail(): Promise<void> { await rm(TOKEN_FILE, { force: true }); }
 
+export async function isGmailConnected(): Promise<boolean> {
+  const stored = await readProtectedToken();
+  if (!stored) return false;
+  try {
+    const tokens = JSON.parse(stored) as Record<string, unknown>;
+    return typeof tokens.access_token === 'string' || typeof tokens.refresh_token === 'string';
+  } catch {
+    return false;
+  }
+}
+
 async function powershell(script: string, stdin?: string): Promise<string> {
   if (process.platform !== 'win32') throw new Error('This M3 credential store currently targets Windows 10/11.');
   return new Promise((resolve, reject) => {
@@ -91,11 +102,23 @@ async function powershell(script: string, stdin?: string): Promise<string> {
 }
 async function writeProtectedToken(tokenJson: string) {
   await mkdir(TOKEN_DIR, { recursive: true });
-  const script = "$secret = [Console]::In.ReadToEnd(); $secure = ConvertTo-SecureString -String $secret -AsPlainText -Force; $encrypted = ConvertFrom-SecureString -SecureString $secure; [IO.File]::WriteAllText($env:PENGU_GMAIL_TOKEN_FILE, $encrypted, [Text.Encoding]::UTF8)";
+  const script = "$ErrorActionPreference = 'Stop'; try { $secret = [Console]::In.ReadToEnd(); if ([string]::IsNullOrWhiteSpace($secret)) { throw 'No Gmail credentials were received.' }; Add-Type -AssemblyName System.Security | Out-Null; $bytes = [System.Text.Encoding]::UTF8.GetBytes($secret); $encrypted = [System.Security.Cryptography.ProtectedData]::Protect($bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser); [System.IO.File]::WriteAllBytes($env:PENGU_GMAIL_TOKEN_FILE, $encrypted) } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }";
   await powershell(script, tokenJson);
+  if (await readProtectedToken() !== tokenJson) {
+    throw new Error('Windows could not verify the saved Gmail credentials. Select Connect Gmail and sign in again.');
+  }
 }
 async function readProtectedToken(): Promise<string | undefined> {
-  try { await readFile(TOKEN_FILE); } catch { return undefined; }
-  const script = "$encrypted = [IO.File]::ReadAllText($env:PENGU_GMAIL_TOKEN_FILE); $secure = ConvertTo-SecureString -String $encrypted; $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure); try { [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }";
-  return powershell(script);
+  try {
+    const file = await readFile(TOKEN_FILE);
+    if (file.byteLength < 16) return undefined;
+  } catch {
+    return undefined;
+  }
+  const script = "$ErrorActionPreference = 'Stop'; try { Add-Type -AssemblyName System.Security | Out-Null; $encrypted = [System.IO.File]::ReadAllBytes($env:PENGU_GMAIL_TOKEN_FILE); $plain = [System.Security.Cryptography.ProtectedData]::Unprotect($encrypted, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser); [Console]::Out.Write([System.Text.Encoding]::UTF8.GetString($plain)) } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }";
+  try {
+    return await powershell(script);
+  } catch {
+    return undefined;
+  }
 }

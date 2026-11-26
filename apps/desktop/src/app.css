@@ -20,6 +20,8 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .pet-shell {
   box-sizing: border-box;
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -60,6 +62,15 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-height: 0;
+  max-height: calc(100% - 220px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.composer > * {
+  flex-shrink: 0;
 }
 
 .composer textarea {
@@ -122,13 +133,13 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 }
 
 .tab-panel {
-  min-height: 120px;
+  min-height: 0;
   margin-top: 8px;
 }
 
 .chat-panel, .timeline, .history-list, .pending-list { display: flex; flex-direction: column; gap: 8px; }
 .connection { margin: 0; color: #b7c7dc; font-size: 12px; }
-.chat-log { min-height: 100px; max-height: 260px; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+.chat-log { min-height: 100px; max-height: min(260px, 40vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; display: flex; flex-direction: column; gap: 8px; }
 .chat-event, .timeline-item, .task-card { padding: 9px; border-radius: 9px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); }
 .chat-event p, .timeline-item p, .task-card p { margin: 4px 0; overflow-wrap: anywhere; }
 .request-form { display: flex; flex-direction: column; gap: 6px; }
@@ -161,11 +172,14 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   flex: 1;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .pet-stack {
   position: relative;
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   align-items: center;
 }

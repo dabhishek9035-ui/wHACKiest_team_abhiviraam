@@ -6,8 +6,7 @@
 import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
-import { homedir } from "node:os";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type {
   ApprovalRecord,
   CheckpointState,
@@ -179,6 +178,21 @@ export async function startAgent(options: StartAgentOptions = {}) {
 
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
   const projectRoot = path.resolve(currentDir, "../../../");
+  const gmailAuthEntry = path.join(projectRoot, "mcp", "gmail", "dist", "auth.js");
+  let isGmailConnected: () => Promise<boolean> = async () => false;
+  if (existsSync(gmailAuthEntry)) {
+    try {
+      const gmailAuth = await import(pathToFileURL(gmailAuthEntry).href) as {
+        isGmailConnected: () => Promise<boolean>;
+      };
+      isGmailConnected = gmailAuth.isGmailConnected;
+    } catch (err) {
+      console.warn(
+        "[pengu-agent] Gmail credential status is unavailable:",
+        err instanceof Error ? err.message : String(err)
+      );
+    }
+  }
   // The config lives under src/mcp in development; tsc does not copy JSON files
   // into dist, so compiled startup needs the source-tree fallback.
   const configCandidates = [
@@ -259,10 +273,7 @@ export async function startAgent(options: StartAgentOptions = {}) {
     runtime,
     store,
     voice: options.voice ?? createVoiceService(),
-    isGmailConnected: () => {
-      const localAppData = process.env.LOCALAPPDATA ?? path.join(homedir(), "AppData", "Local");
-      return existsSync(path.join(localAppData, "Pengu", "gmail-token.dpapi"));
-    },
+    isGmailConnected,
     startGmailAuth: () => {
       if (gmailAuthProcess && gmailAuthProcess.exitCode === null) return false;
       const authEntry = path.join(projectRoot, "mcp", "gmail", "dist", "auth-cli.js");
@@ -286,10 +297,9 @@ export async function startAgent(options: StartAgentOptions = {}) {
           message: "Could not start Google sign-in. Check the agent setup and try again.",
         });
       });
-      child.once("close", (code) => {
+      child.once("close", async (code) => {
         if (gmailAuthProcess === child) gmailAuthProcess = null;
-        const localAppData = process.env.LOCALAPPDATA ?? path.join(homedir(), "AppData", "Local");
-        const connected = code === 0 && existsSync(path.join(localAppData, "Pengu", "gmail-token.dpapi"));
+        const connected = code === 0 && await isGmailConnected();
         wsServer?.broadcast({
           type: "gmail.auth.status",
           status: connected ? "connected" : "failed",
